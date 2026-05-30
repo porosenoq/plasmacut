@@ -7,6 +7,7 @@ import { filesRouter } from './routes/files.js';
 import { quotesRouter } from './routes/quotes.js';
 import { ordersRouter } from './routes/orders.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { runMigrations } from './migrate.js';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ const PORT = process.env.PORT || 4000;
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
+app.get('/', (_, res) => res.json({ service: 'CutQuote API', status: 'ok' }));
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRouter);
@@ -25,6 +27,11 @@ app.use('/api/orders', ordersRouter);
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`CutQuote backend running on port ${PORT}`);
+runMigrations().then(() => {
+  app.listen(PORT, () => {
+    console.log(`CutQuote backend running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to start:', err.message);
+  process.exit(1);
 });
