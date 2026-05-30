@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cutquote
+      POSTGRES_PASSWORD: cutquote_secret
+      POSTGRES_DB: cutquote
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - '4000:4000'
+    environment:
+      DATABASE_URL: postgres://cutquote:cutquote_secret@db:5432/cutquote
+      JWT_SECRET: supersecret_change_in_prod
+      PARSER_URL: http://parser:5001
+      PORT: 4000
+      UPLOAD_DIR: /uploads
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      - db
+      - parser
+
+  parser:
+    build: ./parser
+    restart: unless-stopped
+    ports:
+      - '5001:5001'
+    volumes:
+      - uploads:/uploads
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - '3000:80'
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads:
