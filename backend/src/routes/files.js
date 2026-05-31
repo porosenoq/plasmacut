@@ -30,6 +30,7 @@ const upload = multer({
   },
 });
 
+// Single file upload — frontend calls this once per file in parallel
 filesRouter.post('/upload', authenticate, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
