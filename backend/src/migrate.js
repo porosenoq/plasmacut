@@ -83,10 +83,42 @@ export async function runMigrations() {
   try {
     await client.query(schema);
     console.log('Database schema ready');
+    await seedAdmin(client);
   } catch (err) {
     console.error('Migration failed:', err.message);
     throw err;
   } finally {
     client.release();
   }
+}
+
+async function seedAdmin(client) {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+  const name = process.env.ADMIN_NAME || 'Admin';
+
+  if (!email || !password) {
+    console.log('No ADMIN_EMAIL/ADMIN_PASSWORD set — skipping admin seed');
+    return;
+  }
+
+  const existing = await client.query('SELECT id, is_admin FROM users WHERE email = $1', [email]);
+
+  if (existing.rows.length > 0) {
+    if (!existing.rows[0].is_admin) {
+      await client.query('UPDATE users SET is_admin = true WHERE email = $1', [email]);
+      console.log(`Promoted ${email} to admin`);
+    } else {
+      console.log(`Admin user ${email} already exists`);
+    }
+    return;
+  }
+
+  const bcrypt = await import('bcryptjs');
+  const hash = await bcrypt.default.hash(password, 10);
+  await client.query(
+    `INSERT INTO users (email, password_hash, name, is_admin) VALUES ($1, $2, $3, true)`,
+    [email.toLowerCase(), hash, name]
+  );
+  console.log(`Admin user created: ${email}`);
 }
