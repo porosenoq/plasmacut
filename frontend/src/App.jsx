@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import UploadPage from './pages/UploadPage.jsx';
 import QuotesPage from './pages/QuotesPage.jsx';
 import OrdersPage from './pages/OrdersPage.jsx';
+import AdminPage from './pages/AdminPage.jsx';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -26,6 +27,7 @@ export default function App() {
             <Route index element={<UploadPage />} />
             <Route path="quotes" element={<QuotesPage />} />
             <Route path="orders" element={<OrdersPage />} />
+            <Route path="admin" element={<AdminPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

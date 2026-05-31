@@ -241,8 +241,11 @@ def parse_dxf():
 
     svg_filename = f'{file_id}.svg'
     svg_path = os.path.join(UPLOAD_DIR, svg_filename)
-    with open(svg_path, 'w') as svg_file:
-        svg_file.write(svg_content)
+    try:
+        with open(svg_path, 'w') as svg_file:
+            svg_file.write(svg_content)
+    except Exception:
+        pass  # svg_path saving is optional; svg_content is always returned
 
     os.unlink(tmp_path)
 

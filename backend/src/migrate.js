@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   name TEXT NOT NULL,
+  is_admin BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -27,17 +28,28 @@ CREATE TABLE IF NOT EXISTS dxf_files (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending','confirmed','in_production','shipped','delivered','cancelled')),
+  delivery_address JSONB,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS quotes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   file_id UUID REFERENCES dxf_files(id) ON DELETE CASCADE,
+  order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
   cutting_method TEXT NOT NULL CHECK (cutting_method IN ('laser','plasma')),
   material TEXT NOT NULL,
   thickness_mm NUMERIC NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1,
   unit_material_cost NUMERIC NOT NULL,
   unit_cutting_cost NUMERIC NOT NULL,
-  setup_fee NUMERIC NOT NULL DEFAULT 5.00,
+  setup_fee NUMERIC NOT NULL DEFAULT 0.16,
   unit_price NUMERIC NOT NULL,
   total_price NUMERIC NOT NULL,
   currency TEXT DEFAULT 'EUR',
@@ -47,19 +59,21 @@ CREATE TABLE IF NOT EXISTS quotes (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS orders (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  quote_id UUID REFERENCES quotes(id),
-  user_id UUID REFERENCES users(id),
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending','confirmed','in_production','shipped','delivered','cancelled')),
-  stripe_payment_intent TEXT,
-  delivery_address JSONB,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Safe column additions for existing deployments
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_admin') THEN
+    ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='order_id') THEN
+    ALTER TABLE quotes ADD COLUMN order_id UUID REFERENCES orders(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_quotes_user ON quotes(user_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_order ON quotes(order_id);
 CREATE INDEX IF NOT EXISTS idx_files_user ON dxf_files(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
 `;
