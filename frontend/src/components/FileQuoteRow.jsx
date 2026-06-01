@@ -11,16 +11,13 @@ const MATERIALS = {
 };
 const THICKNESSES = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
 
-export default function FileQuoteRow({ entry, method, onPricing, onFormChange, onRemove, onQuoteSaved }) {
+export default function FileQuoteRow({ entry, method, onPricing, onFormChange, onRemove }) {
   const [expanded, setExpanded] = useState(true);
   const [form, setForm] = useState(entry.form);
   const [pricing, setPricing] = useState(null);
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
-  // Recalculate when form, method, or file changes
   useEffect(() => {
     if (!entry.file?.cut_length_mm) return;
     setError('');
@@ -33,15 +30,8 @@ export default function FileQuoteRow({ entry, method, onPricing, onFormChange, o
         thickness_mm: form.thickness,
         quantity: form.quantity,
       })
-        .then(p => {
-          setPricing(p);
-          onPricing(p);
-          setCalculating(false);
-        })
-        .catch(e => {
-          setError(e.message);
-          setCalculating(false);
-        });
+        .then(p => { setPricing(p); onPricing(p); setCalculating(false); })
+        .catch(e => { setError(e.message); setCalculating(false); });
     }, 350);
     return () => clearTimeout(t);
   }, [form, method, entry.file]);
@@ -50,38 +40,18 @@ export default function FileQuoteRow({ entry, method, onPricing, onFormChange, o
     const newForm = { ...form, [k]: v };
     setForm(newForm);
     onFormChange(newForm);
-    setSaved(false);
-  };
-
-  const saveQuote = async () => {
-    setSaving(true);
-    try {
-      const q = await api.saveQuote({
-        file_id: entry.file.id,
-        cutting_method: method,
-        material: form.material,
-        thickness_mm: form.thickness,
-        quantity: form.quantity,
-      });
-      setSaved(true);
-      onQuoteSaved?.(q.quote);
-    } catch (e) { setError(e.message); }
-    finally { setSaving(false); }
   };
 
   return (
     <div style={{ background: '#151a25', border: '1px solid #1e293b', borderRadius: 12, overflow: 'hidden' }}>
-      {/* Header row */}
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer', borderBottom: expanded ? '1px solid #1e293b' : 'none' }}
         onClick={() => !entry.loading && setExpanded(e => !e)}>
         <span style={{ fontSize: 16, flexShrink: 0 }}>
           {entry.loading ? '⏳' : entry.error ? '❌' : '📐'}
         </span>
         <span style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0', flex: 1 }}>{entry.name}</span>
-
-        {entry.loading && (
-          <span style={{ fontSize: 12, color: '#64748b' }}>Uploading & parsing...</span>
-        )}
+        {entry.loading && <span style={{ fontSize: 12, color: '#64748b' }}>Uploading & parsing...</span>}
         {!entry.loading && !entry.error && pricing && (
           <span style={{ fontSize: 14, fontWeight: 600, color: '#22d3a5', marginRight: 8 }}>
             {calculating ? '...' : `€${pricing.total_ex_vat} ex. VAT`}
@@ -89,7 +59,8 @@ export default function FileQuoteRow({ entry, method, onPricing, onFormChange, o
         )}
         {!entry.loading && (
           <>
-            <button onClick={e => { e.stopPropagation(); onRemove(); }} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>✕</button>
+            <button onClick={e => { e.stopPropagation(); onRemove(); }}
+              style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>✕</button>
             <span style={{ color: '#475569', fontSize: 12 }}>{expanded ? '▲' : '▼'}</span>
           </>
         )}
@@ -103,22 +74,18 @@ export default function FileQuoteRow({ entry, method, onPricing, onFormChange, o
         </div>
       )}
 
-      {/* Error */}
       {entry.error && (
-        <div style={{ padding: '10px 16px', fontSize: 13, color: '#fca5a5' }}>
-          Failed to parse: {entry.error}
-        </div>
+        <div style={{ padding: '10px 16px', fontSize: 13, color: '#fca5a5' }}>Failed to parse: {entry.error}</div>
       )}
 
-      {/* Expanded content */}
       {expanded && !entry.loading && !entry.error && entry.file && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-          {/* Left: preview */}
+          {/* Preview */}
           <div style={{ borderRight: '1px solid #1e293b' }}>
             <DxfPreview file={entry.file} svgContent={entry.svgContent} compact />
           </div>
 
-          {/* Right: configurator */}
+          {/* Config */}
           <div style={{ padding: 16 }}>
             <Section label="Material">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -143,20 +110,16 @@ export default function FileQuoteRow({ entry, method, onPricing, onFormChange, o
             </Section>
 
             {error && (
-              <div style={{ fontSize: 12, color: '#fca5a5', marginBottom: 10, background: '#1a0a0a', padding: '6px 10px', borderRadius: 6 }}>{error}</div>
+              <div style={{ fontSize: 12, color: '#fca5a5', background: '#1a0a0a', padding: '6px 10px', borderRadius: 6 }}>{error}</div>
             )}
 
-            {/* Price box */}
-            <div style={{ background: '#0f1117', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
+            {/* Price breakdown */}
+            <div style={{ background: '#0f1117', borderRadius: 8, padding: '10px 12px' }}>
               {calculating ? (
                 <div style={{ fontSize: 12, color: '#475569', textAlign: 'center' }}>Calculating...</div>
               ) : pricing ? (
                 <>
-                  {[
-                    ['Material', `€${pricing.unit_material_cost}`],
-                    ['Cutting', `€${pricing.unit_cutting_cost}`],
-                    ['Setup', `€${pricing.setup_fee}`],
-                  ].map(([l, v]) => (
+                  {[['Material', `€${pricing.unit_material_cost}`], ['Cutting', `€${pricing.unit_cutting_cost}`], ['Setup', `€${pricing.setup_fee}`]].map(([l, v]) => (
                     <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '2px 0', color: '#475569' }}>
                       <span>{l}</span><span>{v}</span>
                     </div>
@@ -175,15 +138,6 @@ export default function FileQuoteRow({ entry, method, onPricing, onFormChange, o
                 <div style={{ fontSize: 12, color: '#475569', textAlign: 'center' }}>—</div>
               )}
             </div>
-
-            <button onClick={saveQuote} disabled={!pricing || saving || saved} style={{
-              width: '100%', padding: '9px', borderRadius: 7, border: 'none', fontSize: 13, fontWeight: 600,
-              cursor: pricing && !saved ? 'pointer' : 'not-allowed',
-              background: saved ? '#14532d' : (pricing ? '#22d3a5' : '#1e293b'),
-              color: saved ? '#4ade80' : (pricing ? '#0f1117' : '#475569'),
-            }}>
-              {saved ? '✓ Saved' : saving ? 'Saving...' : 'Save quote'}
-            </button>
           </div>
         </div>
       )}
