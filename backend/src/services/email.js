@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM || 'quotes@cutquote.com';
+const FROM = process.env.EMAIL_FROM || 'quotes@plasmacut.onrender.com';
 const ADMIN = process.env.ADMIN_EMAIL || '';
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
