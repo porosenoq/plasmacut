@@ -22,7 +22,6 @@ export default function UploadPage() {
       id: Math.random().toString(36).slice(2),
       name: f.name,
       file: null, svgContent: null, pricing: null,
-      savedQuote: null,
       form: { material: 'mild_steel', thickness: 2, quantity: 1 },
       loading: true, error: null,
     }));
@@ -47,21 +46,16 @@ export default function UploadPage() {
     setFiles(prev => prev.map(f => f.id === pid ? { ...f, pricing } : f));
   const updateForm = (pid, form) =>
     setFiles(prev => prev.map(f => f.id === pid ? { ...f, form } : f));
-  const setSavedQuote = (pid, quote) =>
-    setFiles(prev => prev.map(f => f.id === pid ? { ...f, savedQuote: quote } : f));
   const removeFile = (pid) =>
     setFiles(prev => prev.filter(f => f.id !== pid));
 
   const onDrop = (e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); };
 
-  const readyFiles = files.filter(f => f.pricing);
-  const savedFiles = files.filter(f => f.savedQuote);
+  const readyFiles = files.filter(f => f.pricing && !f.loading && !f.error);
+  const pendingFiles = files.filter(f => f.loading);
   const subtotal = readyFiles.reduce((sum, f) => sum + (f.pricing?.total_ex_vat ?? 0), 0);
   const vatAmount = subtotal * VAT_RATE;
   const grandTotal = subtotal + vatAmount;
-
-  const checkoutQuotes = savedFiles.map(f => ({ ...f.savedQuote, original_name: f.file?.original_name }));
-  const checkoutSubtotal = savedFiles.reduce((sum, f) => sum + Number(f.savedQuote?.total_price ?? 0), 0);
 
   const handleOrderSuccess = (result) => {
     setShowCheckout(false);
@@ -69,11 +63,13 @@ export default function UploadPage() {
     setFiles([]);
   };
 
+  const canCheckout = readyFiles.length > 0 && pendingFiles.length === 0;
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 600, color: '#f8fafc', marginBottom: 6 }}>New quote</h1>
-        <p style={{ fontSize: 14, color: '#64748b' }}>Select cutting method, upload DXF files, configure each part, then place your order.</p>
+        <p style={{ fontSize: 14, color: '#64748b' }}>Select cutting method, upload your DXF files, configure each part, then place your order.</p>
       </div>
 
       {/* Completed order banner */}
@@ -81,13 +77,9 @@ export default function UploadPage() {
         <div style={{ background: '#0a1f0f', border: '1px solid #166534', borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 500, color: '#4ade80' }}>✓ Order placed successfully!</div>
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-              Order #{completedOrder.id.slice(0,8).toUpperCase()} · A confirmation email has been sent.
-            </div>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Order #{completedOrder.id.slice(0,8).toUpperCase()} · A confirmation email has been sent.</div>
           </div>
-          <a href="/orders" style={{ fontSize: 13, color: '#22d3a5', textDecoration: 'none', background: 'rgba(34,211,165,0.1)', padding: '6px 14px', borderRadius: 6 }}>
-            Track order →
-          </a>
+          <a href="/orders" style={{ fontSize: 13, color: '#22d3a5', textDecoration: 'none', background: 'rgba(34,211,165,0.1)', padding: '6px 14px', borderRadius: 6 }}>Track order →</a>
         </div>
       )}
 
@@ -132,9 +124,7 @@ export default function UploadPage() {
           <input ref={inputRef} type="file" accept=".dxf" multiple style={{ display: 'none' }}
             onChange={e => handleFiles(e.target.files)} />
           <div style={{ fontSize: 28, marginBottom: 8 }}>📐</div>
-          <p style={{ fontSize: 14, fontWeight: 500, color: '#e2e8f0', marginBottom: 4 }}>
-            Drop DXF files here or click to browse
-          </p>
+          <p style={{ fontSize: 14, fontWeight: 500, color: '#e2e8f0', marginBottom: 4 }}>Drop DXF files here or click to browse</p>
           <p style={{ fontSize: 12, color: '#475569' }}>Multiple files supported · max 20 MB each</p>
         </div>
       </div>
@@ -154,7 +144,6 @@ export default function UploadPage() {
                 onPricing={p => updatePricing(entry.id, p)}
                 onFormChange={f => updateForm(entry.id, f)}
                 onRemove={() => removeFile(entry.id)}
-                onQuoteSaved={q => setSavedQuote(entry.id, q)}
               />
             ))}
           </div>
@@ -162,66 +151,62 @@ export default function UploadPage() {
       )}
 
       {/* Order summary */}
-      {readyFiles.length > 0 && (
+      {files.length > 0 && (
         <div style={{ background: '#151a25', border: '1px solid #1e293b', borderRadius: 12, padding: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8', marginBottom: 14 }}>Order summary</div>
 
-          {readyFiles.map(f => (
-            <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '5px 0', borderBottom: '1px solid #0f1117', color: '#64748b' }}>
-              <span style={{ color: '#94a3b8' }}>
-                {f.file?.original_name}
-                <span style={{ fontSize: 11, marginLeft: 6 }}>× {f.form.quantity}</span>
-                {f.savedQuote && <span style={{ fontSize: 11, color: '#22d3a5', marginLeft: 6 }}>✓ saved</span>}
-              </span>
-              <span>€{f.pricing.total_ex_vat}</span>
-            </div>
-          ))}
+          {readyFiles.length > 0 ? (
+            <>
+              {readyFiles.map(f => (
+                <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '5px 0', borderBottom: '1px solid #0f1117', color: '#64748b' }}>
+                  <span style={{ color: '#94a3b8' }}>
+                    {f.file?.original_name}
+                    <span style={{ fontSize: 11, marginLeft: 6 }}>× {f.form.quantity}</span>
+                  </span>
+                  <span>€{f.pricing.total_ex_vat}</span>
+                </div>
+              ))}
 
-          <div style={{ marginTop: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: '#64748b' }}>
-              <span>Subtotal (ex. VAT)</span><span>€{subtotal.toFixed(2)}</span>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: '#64748b' }}>
+                  <span>Subtotal (ex. VAT)</span><span>€{subtotal.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: '#64748b' }}>
+                  <span>VAT (20%)</span><span>€{vatAmount.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700, padding: '10px 0 0', color: '#f8fafc', borderTop: '1px solid #1e293b', marginTop: 6 }}>
+                  <span>Total inc. VAT</span>
+                  <span style={{ color: '#22d3a5' }}>€{grandTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: '#475569', textAlign: 'center', padding: '12px 0' }}>
+              {pendingFiles.length > 0 ? 'Waiting for files to finish uploading...' : 'Configure your parts above to see pricing'}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: '#64748b' }}>
-              <span>VAT (20%)</span><span>€{vatAmount.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700, padding: '10px 0 0', color: '#f8fafc', borderTop: '1px solid #1e293b', marginTop: 6 }}>
-              <span>Total inc. VAT</span>
-              <span style={{ color: '#22d3a5' }}>€{grandTotal.toFixed(2)}</span>
-            </div>
-          </div>
+          )}
 
-          <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
-            <button
-              onClick={() => setShowCheckout(true)}
-              disabled={savedFiles.length === 0}
-              title={savedFiles.length === 0 ? 'Save at least one quote first' : ''}
-              style={{
-                flex: 1, padding: '12px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600,
-                cursor: savedFiles.length > 0 ? 'pointer' : 'not-allowed',
-                background: savedFiles.length > 0 ? '#22d3a5' : '#1e293b',
-                color: savedFiles.length > 0 ? '#0f1117' : '#475569',
-              }}>
-              Proceed to checkout →
-            </button>
-          </div>
-          {savedFiles.length === 0 && readyFiles.length > 0 && (
-            <p style={{ fontSize: 11, color: '#475569', marginTop: 8, textAlign: 'center' }}>
-              Save at least one quote above to proceed to checkout
-            </p>
-          )}
-          {savedFiles.length > 0 && savedFiles.length < readyFiles.length && (
-            <p style={{ fontSize: 11, color: '#fbbf24', marginTop: 8, textAlign: 'center' }}>
-              {readyFiles.length - savedFiles.length} part{readyFiles.length - savedFiles.length > 1 ? 's' : ''} not yet saved — only saved parts will be ordered
-            </p>
-          )}
+          <button
+            onClick={() => setShowCheckout(true)}
+            disabled={!canCheckout}
+            style={{
+              width: '100%', marginTop: 16, padding: '12px', borderRadius: 8, border: 'none',
+              fontSize: 14, fontWeight: 600,
+              cursor: canCheckout ? 'pointer' : 'not-allowed',
+              background: canCheckout ? '#22d3a5' : '#1e293b',
+              color: canCheckout ? '#0f1117' : '#475569',
+            }}>
+            {pendingFiles.length > 0 ? 'Waiting for uploads...' : `Proceed to checkout →`}
+          </button>
         </div>
       )}
 
       {/* Checkout modal */}
       {showCheckout && (
         <CheckoutModal
-          quotes={checkoutQuotes}
-          totalExVat={checkoutSubtotal}
+          files={readyFiles}
+          method={method}
+          totalExVat={subtotal}
           onClose={() => setShowCheckout(false)}
           onSuccess={handleOrderSuccess}
         />
