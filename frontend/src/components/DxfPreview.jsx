@@ -16,6 +16,15 @@ export default function DxfPreview({ file, svgContent, compact = false }) {
   const onWheel = (e) => { e.preventDefault(); setZoom(z => Math.max(0.3, Math.min(5, z * (e.deltaY < 0 ? 1.1 : 0.91)))); };
   const reset = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
+  // Make SVG fill its container and fit entirely — remove fixed width/height,
+  // add viewBox="0 0 400 400" and preserveAspectRatio so it scales down to fit
+  const fittedSvg = svgContent
+    ? svgContent
+        .replace(/width="400"/, 'width="100%"')
+        .replace(/height="400"/, 'height="100%"')
+        .replace(/<svg /, '<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block" ')
+    : null;
+
   const stats = [
     { label: t('boundingBox'), value: file?.bounding_box_w_mm ? `${(+file.bounding_box_w_mm).toFixed(1)} \u00D7 ${(+file.bounding_box_h_mm).toFixed(1)} mm` : '\u2014' },
     { label: t('cutLength'), value: file?.cut_length_mm ? `${(+file.cut_length_mm / 1000).toFixed(2)} m` : '\u2014' },
@@ -43,10 +52,21 @@ export default function DxfPreview({ file, svgContent, compact = false }) {
 
       {view === 'preview' && (
         <>
-          <div style={{ background: '#0f1117', height: previewHeight, overflow: 'hidden', cursor: 'grab', position: 'relative', userSelect: 'none' }}
+          <div
+            style={{ background: '#0f1117', height: previewHeight, overflow: 'hidden', cursor: dragging.current ? 'grabbing' : 'grab', position: 'relative', userSelect: 'none' }}
             onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onWheel={onWheel}>
-            <div style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: 'center', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {svgContent ? <div dangerouslySetInnerHTML={{ __html: svgContent }} style={{ display: 'flex' }} /> : <div style={{ color: '#334155', fontSize: 13 }}>No preview</div>}
+            <div style={{
+              transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`,
+              transformOrigin: 'center',
+              width: '100%',
+              height: '100%',
+              padding: 8,
+              boxSizing: 'border-box',
+            }}>
+              {fittedSvg
+                ? <div dangerouslySetInnerHTML={{ __html: fittedSvg }} style={{ width: '100%', height: '100%' }} />
+                : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#334155', fontSize: 13 }}>No preview</div>
+              }
             </div>
             <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
               {[['+', () => setZoom(z => Math.min(5, z * 1.2))], ['-', () => setZoom(z => Math.max(0.3, z * 0.83))], ['o', reset]].map(([lbl, fn]) => (
