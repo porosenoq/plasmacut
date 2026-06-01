@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 
-function SvgThumbnail({ svgContent }) {
+function SvgThumbnail({ svgContent, onExpand }) {
   if (!svgContent) {
     return (
       <div style={{ width: 80, height: 80, background: '#0f1117', borderRadius: 8, border: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#334155', fontSize: 11 }}>
@@ -10,14 +10,12 @@ function SvgThumbnail({ svgContent }) {
     );
   }
 
-  // Resize the SVG to 80x80 with a viewBox so it scales properly
   let sized = svgContent;
   if (sized.includes('width="400"')) {
     sized = sized.replace('width="400"', 'width="80"').replace('height="400"', 'height="80"');
   } else {
     sized = sized.replace(/<svg /, '<svg width="80" height="80" ');
   }
-  // Ensure viewBox is set so content scales down
   if (!sized.includes('viewBox')) {
     sized = sized.replace(/<svg /, '<svg viewBox="0 0 400 400" ');
   }
@@ -25,48 +23,94 @@ function SvgThumbnail({ svgContent }) {
   const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(sized);
 
   return (
-    <div style={{ width: 80, height: 80, borderRadius: 8, border: '1px solid #1e293b', overflow: 'hidden', flexShrink: 0 }}>
+    <div onClick={onExpand} style={{ width: 80, height: 80, borderRadius: 8, border: '1px solid #1e293b', overflow: 'hidden', flexShrink: 0, cursor: 'pointer', position: 'relative' }}
+      title="Click to enlarge">
       <img src={dataUrl} width={80} height={80} alt="DXF preview" style={{ display: 'block' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(34,211,165,0)', borderRadius: 8, transition: 'background 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(34,211,165,0.12)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'rgba(34,211,165,0)'} />
+    </div>
+  );
+}
+
+function SvgModal({ svgContent, filename, onClose }) {
+  if (!svgContent) return null;
+
+  let sized = svgContent;
+  if (sized.includes('width="400"')) {
+    sized = sized.replace('width="400"', 'width="480"').replace('height="400"', 'height="480"');
+  } else {
+    sized = sized.replace(/<svg /, '<svg width="480" height="480" ');
+  }
+  if (!sized.includes('viewBox')) {
+    sized = sized.replace(/<svg /, '<svg viewBox="0 0 400 400" ');
+  }
+
+  const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(sized);
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#151a25', border: '1px solid #1e293b', borderRadius: 14, overflow: 'hidden', maxWidth: 540, width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0' }}>{filename}</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>x</button>
+        </div>
+        <div style={{ background: '#0f1117', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <img src={dataUrl} width={480} height={480} alt="DXF preview" style={{ display: 'block', borderRadius: 8 }} />
+        </div>
+      </div>
     </div>
   );
 }
 
 function QuoteCard({ quote, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: '#0f1117', borderRadius: 8 }}>
-      <SvgThumbnail svgContent={quote.svg_content} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0', marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {quote.original_name}
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: '#0f1117', borderRadius: 8 }}>
+        <SvgThumbnail svgContent={quote.svg_content} onExpand={() => setExpanded(true)} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0', marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {quote.original_name}
+          </div>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+            {[
+              ['Method', quote.cutting_method],
+              ['Material', quote.material?.replace('_', ' ')],
+              ['Thickness', `${quote.thickness_mm} mm`],
+              ['Qty', `x${quote.quantity}`],
+              ['Size', quote.bounding_box_w_mm ? `${(+quote.bounding_box_w_mm).toFixed(0)}x${(+quote.bounding_box_h_mm).toFixed(0)} mm` : '---'],
+            ].map(([l, v]) => (
+              <div key={l}>
+                <div style={{ fontSize: 10, color: '#475569' }}>{l}</div>
+                <div style={{ fontSize: 12, color: '#94a3b8', textTransform: 'capitalize' }}>{v}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-          {[
-            ['Method', quote.cutting_method],
-            ['Material', quote.material?.replace('_', ' ')],
-            ['Thickness', `${quote.thickness_mm} mm`],
-            ['Qty', `x${quote.quantity}`],
-            ['Size', quote.bounding_box_w_mm ? `${(+quote.bounding_box_w_mm).toFixed(0)}x${(+quote.bounding_box_h_mm).toFixed(0)} mm` : '---'],
-          ].map(([l, v]) => (
-            <div key={l}>
-              <div style={{ fontSize: 10, color: '#475569' }}>{l}</div>
-              <div style={{ fontSize: 12, color: '#94a3b8', textTransform: 'capitalize' }}>{v}</div>
-            </div>
-          ))}
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#22d3a5' }}>
+            {'\u20AC'}{(+quote.total_price).toFixed(2)}
+          </div>
+          <div style={{ fontSize: 11, color: '#475569', marginBottom: 6 }}>ex. VAT</div>
+          {!quote.order_id && (
+            <button onClick={() => onDelete(quote.id)}
+              style={{ fontSize: 11, padding: '3px 8px', background: 'transparent', color: '#475569', border: '1px solid #1e293b', borderRadius: 5, cursor: 'pointer' }}>
+              remove
+            </button>
+          )}
         </div>
       </div>
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: '#22d3a5' }}>
-          E{(+quote.total_price).toFixed(2)}
-        </div>
-        <div style={{ fontSize: 11, color: '#475569', marginBottom: 6 }}>ex. VAT</div>
-        {!quote.order_id && (
-          <button onClick={() => onDelete(quote.id)}
-            style={{ fontSize: 11, padding: '3px 8px', background: 'transparent', color: '#475569', border: '1px solid #1e293b', borderRadius: 5, cursor: 'pointer' }}>
-            remove
-          </button>
-        )}
-      </div>
-    </div>
+
+      {expanded && (
+        <SvgModal
+          svgContent={quote.svg_content}
+          filename={quote.original_name}
+          onClose={() => setExpanded(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -86,7 +130,6 @@ export default function QuotesPage() {
 
   if (loading) return <div style={{ color: '#475569', padding: 32 }}>Loading...</div>;
 
-  // Group by order_id, or by upload session (within 60s) for drafts
   const groups = [];
   const orderMap = {};
 
@@ -120,7 +163,7 @@ export default function QuotesPage() {
 
       {quotes.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '64px 0', color: '#475569' }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>[]</div>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>[ ]</div>
           <p style={{ fontSize: 15 }}>No quotes yet</p>
           <a href="/" style={{ fontSize: 13, color: '#22d3a5', textDecoration: 'none', display: 'inline-block', marginTop: 8 }}>
             Upload a DXF to get started
@@ -142,7 +185,6 @@ export default function QuotesPage() {
                 border: `1px solid ${isOrdered ? '#2d1b69' : '#1e293b'}`,
                 borderRadius: 12, overflow: 'hidden',
               }}>
-                {/* Group header */}
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '12px 16px', borderBottom: '1px solid #1e293b',
@@ -165,30 +207,28 @@ export default function QuotesPage() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: 15, fontWeight: 600, color: '#22d3a5' }}>
-                      E{(groupTotal + groupVat).toFixed(2)} inc. VAT
+                      {'\u20AC'}{(groupTotal + groupVat).toFixed(2)} inc. VAT
                     </div>
-                    <div style={{ fontSize: 11, color: '#475569' }}>E{groupTotal.toFixed(2)} ex. VAT</div>
+                    <div style={{ fontSize: 11, color: '#475569' }}>{'\u20AC'}{groupTotal.toFixed(2)} ex. VAT</div>
                   </div>
                 </div>
 
-                {/* Quote cards */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 12px' }}>
                   {group.quotes.map(q => (
                     <QuoteCard key={q.id} quote={q} onDelete={deleteQuote} />
                   ))}
                 </div>
 
-                {/* Footer totals for multi-part groups */}
                 {group.quotes.length > 1 && (
                   <div style={{ padding: '10px 16px', borderTop: '1px solid #1e293b', display: 'flex', justifyContent: 'flex-end', gap: 20 }}>
                     <div style={{ fontSize: 12, color: '#64748b' }}>
-                      Subtotal: <span style={{ color: '#94a3b8' }}>E{groupTotal.toFixed(2)}</span>
+                      Subtotal: <span style={{ color: '#94a3b8' }}>{'\u20AC'}{groupTotal.toFixed(2)}</span>
                     </div>
                     <div style={{ fontSize: 12, color: '#64748b' }}>
-                      VAT 20%: <span style={{ color: '#94a3b8' }}>E{groupVat.toFixed(2)}</span>
+                      VAT 20%: <span style={{ color: '#94a3b8' }}>{'\u20AC'}{groupVat.toFixed(2)}</span>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#22d3a5' }}>
-                      Total: E{(groupTotal + groupVat).toFixed(2)}
+                      Total: {'\u20AC'}{(groupTotal + groupVat).toFixed(2)}
                     </div>
                   </div>
                 )}
