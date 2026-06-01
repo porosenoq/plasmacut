@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { api } from '../lib/api.js';
+import { usePrefs } from '../lib/prefs.jsx';
 
 export default function CheckoutModal({ files, method, totalExVat, onClose, onSuccess }) {
-  const [form, setForm] = useState({
-    name: '', street: '', city: '', postal_code: '', country: '', notes: '',
-  });
+  const { t, colors } = usePrefs();
+  const [form, setForm] = useState({ name: '', street: '', city: '', postal_code: '', country: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -16,129 +16,78 @@ export default function CheckoutModal({ files, method, totalExVat, onClose, onSu
     e.preventDefault();
     setError(''); setSubmitting(true);
     try {
-      // Save all quotes first, then create order
       const savedQuotes = await Promise.all(
-        files.map(f => api.saveQuote({
-          file_id: f.file.id,
-          cutting_method: method,
-          material: f.form.material,
-          thickness_mm: f.form.thickness,
-          quantity: f.form.quantity,
-        }))
+        files.map(f => api.saveQuote({ file_id: f.file.id, cutting_method: method, material: f.form.material, thickness_mm: f.form.thickness, quantity: f.form.quantity }))
       );
-
-      const quoteIds = savedQuotes.map(r => r.quote.id);
-
       const result = await api.createOrder({
-        quote_ids: quoteIds,
-        delivery_address: {
-          name: form.name,
-          street: form.street,
-          city: form.city,
-          postal_code: form.postal_code,
-          country: form.country,
-        },
+        quote_ids: savedQuotes.map(r => r.quote.id),
+        delivery_address: { name: form.name, street: form.street, city: form.city, postal_code: form.postal_code, country: form.country },
         notes: form.notes || undefined,
       });
-
       onSuccess(result);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (e) { setError(e.message); }
+    finally { setSubmitting(false); }
   };
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#151a25', border: '1px solid #1e293b', borderRadius: 14, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+  const inputStyle = { width: '100%', background: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: 6, padding: '8px 11px', fontSize: 13, color: colors.text, outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' };
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: '1px solid #1e293b' }}>
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 14, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: `1px solid ${colors.border}` }}>
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 600, color: '#f8fafc', margin: 0 }}>Place order</h2>
-            <p style={{ fontSize: 12, color: '#64748b', margin: '3px 0 0' }}>{files.length} part{files.length > 1 ? 's' : ''} · confirm delivery details</p>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: colors.text, margin: 0 }}>{t('placeOrder')}</h2>
+            <p style={{ fontSize: 12, color: colors.textMuted, margin: '3px 0 0' }}>{files.length} {files.length > 1 ? t('parts') : t('part')} &middot; {t('confirmDelivery')}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 20, cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: colors.textMuted, fontSize: 20, cursor: 'pointer' }}>{'\u00D7'}</button>
         </div>
 
-        {/* Order summary */}
-        <div style={{ padding: '14px 22px', borderBottom: '1px solid #1e293b', background: '#0f1117' }}>
+        <div style={{ padding: '14px 22px', borderBottom: `1px solid ${colors.border}`, background: colors.bg }}>
           {files.map(f => (
-            <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', color: '#64748b' }}>
-              <span style={{ color: '#94a3b8' }}>
-                {f.file?.original_name}
-                <span style={{ fontSize: 11, marginLeft: 6 }}>× {f.form.quantity}</span>
-                <span style={{ fontSize: 11, marginLeft: 6, color: '#475569' }}>
-                  {f.form.material?.replace('_',' ')} · {f.form.thickness}mm
-                </span>
-              </span>
-              <span>€{f.pricing?.total_ex_vat}</span>
+            <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', color: colors.textMuted }}>
+              <span style={{ color: colors.textSecondary }}>{f.file?.original_name} <span style={{ fontSize: 11 }}>{'\u00D7'} {f.form.quantity}</span> <span style={{ fontSize: 11, color: colors.textFaint }}>{f.form.material?.replace('_',' ')} &middot; {f.form.thickness}mm</span></span>
+              <span>{'\u20AC'}{f.pricing?.total_ex_vat}</span>
             </div>
           ))}
-          <div style={{ borderTop: '1px solid #1e293b', marginTop: 8, paddingTop: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 3 }}>
-              <span>Subtotal ex. VAT</span><span>€{totalExVat.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 6 }}>
-              <span>VAT (20%)</span><span>€{vat.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 700, color: '#22d3a5' }}>
-              <span>Total inc. VAT</span><span>€{total.toFixed(2)}</span>
+          <div style={{ borderTop: `1px solid ${colors.border}`, marginTop: 8, paddingTop: 8 }}>
+            {[[t('subtotalExVat'), `\u20AC${totalExVat.toFixed(2)}`], [t('vat'), `\u20AC${vat.toFixed(2)}`]].map(([l, v]) => (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: colors.textMuted, marginBottom: 3 }}><span>{l}</span><span>{v}</span></div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 700, color: colors.accent }}>
+              <span>{t('totalIncVat')}</span><span>{'\u20AC'}{total.toFixed(2)}</span>
             </div>
           </div>
         </div>
 
-        {/* Form */}
         <form onSubmit={submit} style={{ padding: '18px 22px' }}>
-          <div style={{ fontSize: 12, color: '#64748b', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Delivery address</div>
-
-          {error && (
-            <div style={{ background: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#fca5a5' }}>{error}</div>
-          )}
-
-          <Field label="Full name" value={form.name} onChange={set('name')} required />
-          <Field label="Street address" value={form.street} onChange={set('street')} required />
+          <div style={{ fontSize: 12, color: colors.textMuted, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>{t('deliveryAddress')}</div>
+          {error && <div style={{ background: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+          {[[t('fullName'), 'name'], [t('streetAddress'), 'street']].map(([l, k]) => (
+            <div key={k} style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: colors.textMuted, display: 'block', marginBottom: 5 }}>{l}</label>
+              <input type="text" value={form[k]} onChange={set(k)} required style={inputStyle} />
+            </div>
+          ))}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="City" value={form.city} onChange={set('city')} required />
-            <Field label="Postal code" value={form.postal_code} onChange={set('postal_code')} required />
+            {[[t('city'), 'city'], [t('postalCode'), 'postal_code']].map(([l, k]) => (
+              <div key={k} style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 12, color: colors.textMuted, display: 'block', marginBottom: 5 }}>{l}</label>
+                <input type="text" value={form[k]} onChange={set(k)} required style={inputStyle} />
+              </div>
+            ))}
           </div>
-          <Field label="Country" value={form.country} onChange={set('country')} required />
-          <Field label="Notes (optional)" value={form.notes} onChange={set('notes')} multiline />
-
-          <div style={{ fontSize: 12, color: '#475569', marginBottom: 16, lineHeight: 1.5 }}>
-            By placing this order you agree to our terms. Payment is due upon delivery confirmation. We'll email you with a production timeline within 24 hours.
-          </div>
-
-          <button type="submit" disabled={submitting} style={{
-            width: '100%', padding: '12px',
-            background: submitting ? '#1e293b' : '#22d3a5',
-            color: submitting ? '#475569' : '#0f1117',
-            border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600,
-            cursor: submitting ? 'not-allowed' : 'pointer',
-          }}>
-            {submitting ? 'Placing order...' : `Place order — €${total.toFixed(2)}`}
+          {[[t('country'), 'country', false], [t('notes'), 'notes', true]].map(([l, k, multi]) => (
+            <div key={k} style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: colors.textMuted, display: 'block', marginBottom: 5 }}>{l}</label>
+              {multi ? <textarea value={form[k]} onChange={set(k)} rows={2} style={inputStyle} /> : <input type="text" value={form[k]} onChange={set(k)} required style={inputStyle} />}
+            </div>
+          ))}
+          <div style={{ fontSize: 12, color: colors.textFaint, marginBottom: 16, lineHeight: 1.5 }}>{t('termsNote')}</div>
+          <button type="submit" disabled={submitting} style={{ width: '100%', padding: '12px', background: submitting ? colors.bgTertiary : colors.accent, color: submitting ? colors.textFaint : (colors.bg === '#f1f5f9' ? '#fff' : '#0f1117'), border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+            {submitting ? t('placing') : `${t('placeOrder')} \u2014 \u20AC${total.toFixed(2)}`}
           </button>
         </form>
       </div>
-    </div>
-  );
-}
-
-function Field({ label, value, onChange, required, multiline }) {
-  const style = {
-    width: '100%', background: '#0f1117', border: '1px solid #1e293b',
-    borderRadius: 6, padding: '8px 11px', fontSize: 13, color: '#f8fafc',
-    outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box',
-  };
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 5 }}>{label}</label>
-      {multiline
-        ? <textarea value={value} onChange={onChange} rows={2} style={style} />
-        : <input type="text" value={value} onChange={onChange} required={required} style={style} />
-      }
     </div>
   );
 }
