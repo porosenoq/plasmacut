@@ -59,7 +59,7 @@ export default function FileQuoteRow({ entry, method, onPricing, onFormChange, o
       {entry.error && <div style={{ padding: '10px 16px', fontSize: 13, color: '#fca5a5' }}>{t('failedParse')}: {entry.error}</div>}
 
       {expanded && !entry.loading && !entry.error && entry.file && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '35% 1fr', gap: 0 }}>
           <div style={{ borderRight: `1px solid ${colors.border}` }}>
             <DxfPreview file={entry.file} svgContent={entry.svgContent} compact />
           </div>
