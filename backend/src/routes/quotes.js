@@ -70,7 +70,7 @@ quotesRouter.post('/', authenticate, async (req, res) => {
 
 quotesRouter.get('/', authenticate, async (req, res) => {
   const result = await query(
-    `SELECT q.*, f.original_name, f.bounding_box_w_mm, f.bounding_box_h_mm
+    `SELECT q.*, f.original_name, f.bounding_box_w_mm, f.bounding_box_h_mm, f.cut_length_mm, f.entity_count, f.hole_count, f.svg_content
      FROM quotes q
      JOIN dxf_files f ON f.id = q.file_id
      WHERE q.user_id = $1
@@ -82,7 +82,7 @@ quotesRouter.get('/', authenticate, async (req, res) => {
 
 quotesRouter.get('/:id', authenticate, async (req, res) => {
   const result = await query(
-    `SELECT q.*, f.original_name, f.bounding_box_w_mm, f.bounding_box_h_mm,
+    `SELECT q.*, f.original_name, f.bounding_box_w_mm, f.bounding_box_h_mm, f.cut_length_mm, f.entity_count, f.hole_count, f.svg_content,
             f.cut_length_mm, f.entity_count, f.hole_count
      FROM quotes q
      JOIN dxf_files f ON f.id = q.file_id
