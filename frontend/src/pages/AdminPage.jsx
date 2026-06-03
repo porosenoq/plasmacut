@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 
+async function downloadPdf(orderId) {
+  const token = localStorage.getItem('cq_token');
+  const base = import.meta.env.VITE_API_URL || '/api';
+  try {
+    const res = await fetch(`${base}/orders/${orderId}/pdf`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) { alert('PDF generation failed'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `cutquote-${orderId.slice(0,8)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) { alert('Download failed: ' + e.message); }
+}
+
 async function downloadDxf(fileId, filename) {
   const token = localStorage.getItem('cq_token');
   const base = import.meta.env.VITE_API_URL || '/api';
@@ -160,10 +177,10 @@ export default function AdminPage() {
                           Cancel
                         </button>
                       )}
-                      <a href={api.getPdfUrl(order.id)}
-                        style={{ fontSize: 11, padding: '5px 10px', background: 'transparent', color: '#64748b', border: '1px solid #1e293b', borderRadius: 6, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>
-                        PDF
-                      </a>
+                      <button onClick={() => downloadPdf(order.id)}
+                        style={{ fontSize: 11, padding: '5px 10px', background: 'transparent', color: '#64748b', border: '1px solid #1e293b', borderRadius: 6, cursor: 'pointer' }}>
+                        ↓ PDF
+                      </button>
                     </div>
                   </div>
                 </div>
