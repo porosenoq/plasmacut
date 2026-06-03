@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
+
+async function downloadPdf(orderId) {
+  const token = localStorage.getItem('cq_token');
+  const base = import.meta.env.VITE_API_URL || '/api';
+  try {
+    const res = await fetch(`${base}/orders/${orderId}/pdf`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) { alert('PDF generation failed'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `cutquote-${orderId.slice(0,8)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) { alert('Download failed: ' + e.message); }
+}
 import { usePrefs } from '../lib/prefs.jsx';
 
 const STATUS_STEPS = ['pending', 'confirmed', 'in_production', 'shipped', 'delivered'];
@@ -63,10 +80,10 @@ export default function OrdersPage() {
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: 20, fontWeight: 700, color: colors.accent }}>{'\u20AC'}{total.toFixed(2)}</div>
                     <div style={{ fontSize: 11, color: colors.textFaint, marginBottom: 12 }}>{t('incVat')}</div>
-                    <a href={api.getPdfUrl(order.id)} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 12, padding: '6px 14px', background: 'transparent', color: colors.textMuted, border: `1px solid ${colors.border}`, borderRadius: 6, textDecoration: 'none', display: 'inline-block' }}>
+                    <button onClick={() => downloadPdf(order.id)}
+                      style={{ fontSize: 12, padding: '6px 14px', background: 'transparent', color: colors.textMuted, border: `1px solid ${colors.border}`, borderRadius: 6, cursor: 'pointer' }}>
                       {'\u2193'} PDF
-                    </a>
+                    </button>
                   </div>
                 </div>
 
