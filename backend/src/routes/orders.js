@@ -61,7 +61,7 @@ ordersRouter.get('/', authenticate, async (req, res) => {
   const result = await query(
     `SELECT o.*,
        json_agg(json_build_object(
-         'id', q.id, 'original_name', f.original_name,
+         'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
          'cutting_method', q.cutting_method, 'material', q.material,
          'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
          'unit_price', q.unit_price, 'total_price', q.total_price
@@ -83,7 +83,7 @@ ordersRouter.get('/:id', authenticate, async (req, res) => {
   const result = await query(
     `SELECT o.*,
        json_agg(json_build_object(
-         'id', q.id, 'original_name', f.original_name,
+         'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
          'cutting_method', q.cutting_method, 'material', q.material,
          'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
          'unit_price', q.unit_price, 'total_price', q.total_price
@@ -105,7 +105,7 @@ ordersRouter.get('/:id/pdf', authenticate, async (req, res) => {
   const result = await query(
     `SELECT o.*,
        json_agg(json_build_object(
-         'id', q.id, 'original_name', f.original_name,
+         'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
          'cutting_method', q.cutting_method, 'material', q.material,
          'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
          'unit_price', q.unit_price, 'total_price', q.total_price
@@ -167,7 +167,7 @@ ordersRouter.get('/admin/all', authenticate, async (req, res) => {
     `SELECT o.*,
        u.name as customer_name, u.email as customer_email,
        json_agg(json_build_object(
-         'original_name', f.original_name, 'cutting_method', q.cutting_method,
+         'original_name', f.original_name, 'file_id', f.id, 'cutting_method', q.cutting_method,
          'material', q.material, 'thickness_mm', q.thickness_mm,
          'quantity', q.quantity, 'total_price', q.total_price
        )) as items,
