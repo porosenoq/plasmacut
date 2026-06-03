@@ -105,3 +105,21 @@ filesRouter.delete('/:id', authenticate, async (req, res) => {
   if (!result.rows[0]) return res.status(404).json({ error: 'File not found' });
   res.json({ success: true });
 });
+
+// Admin: download original DXF file
+filesRouter.get('/:id/download', authenticate, async (req, res) => {
+  const userResult = await query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
+  if (!userResult.rows[0]?.is_admin) return res.status(403).json({ error: 'Admin only' });
+
+  const result = await query('SELECT * FROM dxf_files WHERE id = $1', [req.params.id]);
+  const file = result.rows[0];
+  if (!file) return res.status(404).json({ error: 'File not found' });
+
+  if (!fs.existsSync(file.stored_path)) {
+    return res.status(410).json({ error: 'File no longer on disk — server was restarted. Upgrade to persistent storage to avoid this.' });
+  }
+
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
+  fs.createReadStream(file.stored_path).pipe(res);
+});
