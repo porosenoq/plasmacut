@@ -1,5 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
+
+async function downloadDxf(fileId, filename) {
+  const token = localStorage.getItem('cq_token');
+  const base = import.meta.env.VITE_API_URL || '/api';
+  try {
+    const res = await fetch(`${base}/files/${fileId}/download`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.error || 'Download failed');
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Download failed: ' + e.message);
+  }
+}
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useNavigate } from 'react-router-dom';
 
@@ -90,12 +113,20 @@ export default function AdminPage() {
                     </div>
 
                     {/* Items */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
                       {(order.items || []).map((item, i) => (
-                        <div key={i} style={{ fontSize: 12, color: '#94a3b8', display: 'flex', gap: 10 }}>
+                        <div key={i} style={{ fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                           <span>📐 {item.original_name}</span>
                           <span style={{ color: '#64748b' }}>{item.cutting_method} · {item.material?.replace('_',' ')} · {item.thickness_mm}mm · ×{item.quantity}</span>
                           <span style={{ color: '#22d3a5' }}>€{Number(item.total_price).toFixed(2)}</span>
+                          {item.file_id && (
+                            <button
+                              onClick={() => downloadDxf(item.file_id, item.original_name)}
+                              style={{ fontSize: 11, padding: '2px 8px', background: 'rgba(34,211,165,0.1)', color: '#22d3a5', border: '1px solid rgba(34,211,165,0.3)', borderRadius: 5, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              title="Download DXF file">
+                              ↓ DXF
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
