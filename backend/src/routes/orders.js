@@ -100,27 +100,46 @@ ordersRouter.get('/:id', authenticate, async (req, res) => {
   res.json(result.rows[0]);
 });
 
-// Download PDF quote
+// Download PDF quote (works for both customer and admin)
 ordersRouter.get('/:id/pdf', authenticate, async (req, res) => {
-  const result = await query(
-    `SELECT o.*,
-       json_agg(json_build_object(
-         'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
-         'cutting_method', q.cutting_method, 'material', q.material,
-         'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
-         'unit_price', q.unit_price, 'total_price', q.total_price
-       )) as items
-     FROM orders o
-     JOIN quotes q ON q.order_id = o.id
-     JOIN dxf_files f ON f.id = q.file_id
-     WHERE o.id = $1 AND o.user_id = $2
-     GROUP BY o.id`,
-    [req.params.id, req.user.id]
-  );
+  const userResult = await query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+  const isAdmin = userResult.rows[0]?.is_admin;
+
+  // Admins can download any order's PDF, customers only their own
+  const orderQuery = isAdmin
+    ? `SELECT o.*,
+         json_agg(json_build_object(
+           'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
+           'cutting_method', q.cutting_method, 'material', q.material,
+           'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
+           'unit_price', q.unit_price, 'total_price', q.total_price
+         )) as items
+       FROM orders o
+       JOIN quotes q ON q.order_id = o.id
+       JOIN dxf_files f ON f.id = q.file_id
+       WHERE o.id = $1
+       GROUP BY o.id`
+    : `SELECT o.*,
+         json_agg(json_build_object(
+           'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
+           'cutting_method', q.cutting_method, 'material', q.material,
+           'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
+           'unit_price', q.unit_price, 'total_price', q.total_price
+         )) as items
+       FROM orders o
+       JOIN quotes q ON q.order_id = o.id
+       JOIN dxf_files f ON f.id = q.file_id
+       WHERE o.id = $1 AND o.user_id = $2
+       GROUP BY o.id`;
+
+  const params = isAdmin ? [req.params.id] : [req.params.id, req.user.id];
+  const result = await query(orderQuery, params);
   if (!result.rows[0]) return res.status(404).json({ error: 'Order not found' });
 
   const order = result.rows[0];
-  const userResult = await query('SELECT * FROM users WHERE id = $1', [req.user.id]);
+
+  // For PDF, show the customer's info not the admin's
+  const ownerResult = await query('SELECT * FROM users WHERE id = $1', [order.user_id]);
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="cutquote-${order.id.slice(0,8)}.pdf"`);
@@ -128,7 +147,7 @@ ordersRouter.get('/:id/pdf', authenticate, async (req, res) => {
   generateQuotePdf({
     order,
     items: order.items,
-    user: userResult.rows[0],
+    user: ownerResult.rows[0],
     address: order.delivery_address,
     res,
   });
