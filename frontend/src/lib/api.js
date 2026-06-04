@@ -36,6 +36,9 @@ export const api = {
   getOrder: (id) => request('GET', `/orders/${id}`),
   getPdfUrl: (id) => `${BASE}/orders/${id}/pdf`,
   getDxfDownloadUrl: (fileId) => `${BASE}/files/${fileId}/download`,
+  getProfile: () => request('GET', '/profile'),
+  saveProfile: (d) => request('PUT', '/profile', d),
   updateOrderStatus: (id, status) => request('PATCH', `/orders/${id}/status`, { status }),
   getAdminOrders: () => request('GET', '/orders/admin/all'),
 };
+// appended
