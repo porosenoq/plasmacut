@@ -6,8 +6,9 @@ import { authRouter } from './routes/auth.js';
 import { filesRouter } from './routes/files.js';
 import { quotesRouter } from './routes/quotes.js';
 import { ordersRouter } from './routes/orders.js';
+import { profileRouter } from './routes/profile.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { runMigrations } from './migrate.js';
+import { runMigrations, runProfileMigration } from './migrate.js';
 
 dotenv.config();
 
@@ -24,10 +25,11 @@ app.use('/api/auth', authRouter);
 app.use('/api/files', filesRouter);
 app.use('/api/quotes', quotesRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/profile', profileRouter);
 
 app.use(errorHandler);
 
-runMigrations().then(() => {
+runMigrations().then(() => runProfileMigration()).then(() => {
   app.listen(PORT, () => {
     console.log(`CutQuote backend running on port ${PORT}`);
   });
