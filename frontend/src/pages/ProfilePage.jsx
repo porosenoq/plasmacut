@@ -20,8 +20,19 @@ export default function ProfilePage() {
 
   useEffect(() => {
     api.getProfile()
-      .then(p => { if (p) setForm({ full_name: p.full_name || '', phone: p.phone || '', street: p.street || '', city: p.city || '', postal_code: p.postal_code || '', country: p.country || '' }); })
-      .catch(() => {})
+      .then(p => {
+        if (p) {
+          setForm({
+            full_name:   p.full_name   || '',
+            phone:       p.phone       || '',
+            street:      p.street      || '',
+            city:        p.city        || '',
+            postal_code: p.postal_code || '',
+            country:     p.country     || '',
+          });
+        }
+      })
+      .catch(err => console.error('Profile load error:', err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -45,7 +56,8 @@ export default function ProfilePage() {
   const label = { fontSize: 12, color: colors.textMuted, display: 'block', marginBottom: 5 };
   const inputStyle = { width: '100%', background: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: 6, padding: '8px 11px', fontSize: 13, color: colors.text, outline: 'none', boxSizing: 'border-box' };
 
-  if (loading) return <div style={{ color: colors.textMuted, padding: 32 }}>Loading...</div>;
+  // Don't block render on profile load - show form even if still loading
+  // This prevents the blank page on first registration
 
   return (
     <div style={{ maxWidth: 560 }}>
