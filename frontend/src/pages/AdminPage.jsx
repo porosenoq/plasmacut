@@ -148,10 +148,15 @@ export default function AdminPage() {
                       ))}
                     </div>
 
-                    {/* Address */}
+                    {/* Address + Phone */}
                     {addr.street && (
                       <div style={{ fontSize: 11, color: '#475569' }}>
                         📍 {addr.name} · {addr.street}, {addr.city} {addr.postal_code}, {addr.country}
+                      </div>
+                    )}
+                    {order.phone && (
+                      <div style={{ fontSize: 11, color: '#475569', marginTop: 3 }}>
+                        📞 {order.phone}
                       </div>
                     )}
                   </div>
