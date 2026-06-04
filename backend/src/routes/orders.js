@@ -8,7 +8,7 @@ export const ordersRouter = Router();
 
 // Create order from one or more quotes
 ordersRouter.post('/', authenticate, async (req, res) => {
-  const { quote_ids, delivery_address, notes } = req.body;
+  const { quote_ids, delivery_address, notes, phone } = req.body;
 
   if (!quote_ids?.length) return res.status(400).json({ error: 'quote_ids array required' });
   if (!delivery_address?.street || !delivery_address?.city || !delivery_address?.postal_code || !delivery_address?.country) {
@@ -32,9 +32,9 @@ ordersRouter.post('/', authenticate, async (req, res) => {
 
   // Create order
   const orderResult = await query(
-    `INSERT INTO orders (user_id, delivery_address, notes)
-     VALUES ($1, $2, $3) RETURNING *`,
-    [req.user.id, JSON.stringify(delivery_address), notes || null]
+    `INSERT INTO orders (user_id, delivery_address, phone, notes)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [req.user.id, JSON.stringify(delivery_address), phone || null, notes || null]
   );
   const order = orderResult.rows[0];
 
