@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM || 'quotes@plasmacut.onrender.com';
+const FROM = process.env.EMAIL_FROM || 'quotes@cutquote.com';
 const ADMIN = process.env.ADMIN_EMAIL || '';
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
@@ -88,7 +88,7 @@ export async function sendOrderConfirmation({ order, items, user, address }) {
           ${address.name}<br>
           ${address.street}<br>
           ${address.city}, ${address.postal_code}<br>
-          ${address.country}
+          ${address.country}${order.phone ? '<br>Tel: ' + order.phone : ''}
         </div>
       </div>
 
@@ -133,7 +133,7 @@ export async function sendAdminOrderAlert({ order, items, user, address }) {
       <div style="background:#0f1117;border-radius:8px;padding:14px 16px;margin-bottom:16px">
         <div style="font-size:12px;color:#64748b;margin-bottom:6px">Ship to</div>
         <div style="font-size:13px;color:#e2e8f0;line-height:1.6">
-          ${address.name}<br>${address.street}<br>${address.city}, ${address.postal_code}<br>${address.country}
+          ${address.name}<br>${address.street}<br>${address.city}, ${address.postal_code}<br>${address.country}${order.phone ? '<br>Tel: ' + order.phone : ''}
         </div>
       </div>
       <a href="${APP_URL}/admin/orders/${order.id}" style="display:inline-block;padding:10px 20px;background:#22d3a5;color:#0f1117;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none">View in admin →</a>

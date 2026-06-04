@@ -41,6 +41,9 @@ export function generateQuotePdf({ order, items, user, address, res }) {
       .text(`${address.city}, ${address.postal_code}`, col1, infoY + 53)
       .text(address.country, col1, infoY + 66);
   }
+  if (order.phone) {
+    doc.fontSize(9).fillColor(DGRAY).text(`Tel: ${order.phone}`, col1, infoY + (address?.street ? 79 : 40));
+  }
 
   doc.fontSize(7).fillColor(MGRAY).text('QUOTE DETAILS', col2, infoY);
   doc.fontSize(9).fillColor(DGRAY)
