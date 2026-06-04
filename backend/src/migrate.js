@@ -122,3 +122,36 @@ async function seedAdmin(client) {
   );
   console.log(`Admin user created: ${email}`);
 }
+
+// Profile table migration (appended)
+export async function runProfileMigration() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_profiles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        full_name TEXT,
+        phone TEXT,
+        street TEXT,
+        city TEXT,
+        postal_code TEXT,
+        country TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='phone') THEN
+          ALTER TABLE orders ADD COLUMN phone TEXT;
+        END IF;
+      END $$;
+    `);
+    console.log('Profile schema ready');
+  } catch (err) {
+    console.error('Profile migration failed:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
