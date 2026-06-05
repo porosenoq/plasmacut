@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth.jsx';
+import { useNavigate } from 'react-router-dom';
+import { usePrefs } from '../lib/prefs.jsx';
 import { api } from '../lib/api.js';
 
 async function downloadPdf(orderId) {
   const token = localStorage.getItem('cq_token');
   const base = import.meta.env.VITE_API_URL || '/api';
   try {
-    const res = await fetch(`${base}/orders/${orderId}/pdf`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await fetch(`${base}/orders/${orderId}/pdf`, { headers: { 'Authorization': `Bearer ${token}` } });
     if (!res.ok) { alert('PDF generation failed'); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `cutquote-${orderId.slice(0,8)}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
+    a.click(); URL.revokeObjectURL(url);
   } catch (e) { alert('Download failed: ' + e.message); }
 }
 
@@ -22,26 +22,15 @@ async function downloadDxf(fileId, filename) {
   const token = localStorage.getItem('cq_token');
   const base = import.meta.env.VITE_API_URL || '/api';
   try {
-    const res = await fetch(`${base}/files/${fileId}/download`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.error || 'Download failed');
-      return;
-    }
+    const res = await fetch(`${base}/files/${fileId}/download`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!res.ok) { const err = await res.json(); alert(err.error || 'Download failed'); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    alert('Download failed: ' + e.message);
-  }
+    a.click(); URL.revokeObjectURL(url);
+  } catch (e) { alert('Download failed: ' + e.message); }
 }
-import { useAuth } from '../hooks/useAuth.jsx';
-import { useNavigate } from 'react-router-dom';
 
 const STATUS_STEPS = ['pending', 'confirmed', 'in_production', 'shipped', 'delivered'];
 const STATUS_LABELS = {
@@ -59,6 +48,7 @@ const NEXT_STATUS = {
 
 export default function AdminPage() {
   const { user } = useAuth();
+  const { colors } = usePrefs();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,49 +72,52 @@ export default function AdminPage() {
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
   const counts = orders.reduce((acc, o) => { acc[o.status] = (acc[o.status] || 0) + 1; return acc; }, {});
 
-  if (loading) return <div style={{ color: '#475569', padding: 32 }}>Loading...</div>;
+  if (loading) return <div style={{ color: colors.textMuted, padding: 32 }}>Loading...</div>;
 
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600, color: '#f8fafc', marginBottom: 4 }}>Admin — Orders</h1>
-        <p style={{ fontSize: 14, color: '#64748b' }}>{orders.length} total orders</p>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Admin — Orders</h1>
+        <p style={{ fontSize: 14, color: colors.textMuted }}>{orders.length} total orders</p>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 20 }}>
         {STATUS_STEPS.map(s => (
-          <div key={s} style={{ background: '#151a25', border: `1px solid ${filter === s ? STATUS_COLORS[s] : '#1e293b'}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer' }}
-            onClick={() => setFilter(filter === s ? 'all' : s)}>
+          <div key={s}
+            onClick={() => setFilter(filter === s ? 'all' : s)}
+            style={{ background: colors.cardBg, border: `1px solid ${filter === s ? STATUS_COLORS[s] : colors.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer' }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: STATUS_COLORS[s] }}>{counts[s] || 0}</div>
-            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, textTransform: 'capitalize' }}>{STATUS_LABELS[s]}</div>
+            <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 2, textTransform: 'capitalize' }}>{STATUS_LABELS[s]}</div>
           </div>
         ))}
       </div>
 
       {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px 0', color: '#475569' }}>No orders in this status</div>
+        <div style={{ textAlign: 'center', padding: '48px 0', color: colors.textMuted }}>No orders in this status</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map(order => {
             const subtotal = Number(order.subtotal || 0);
             const total = subtotal * 1.20;
             const addr = order.delivery_address || {};
+            const totalWeight = (order.items || []).reduce((s, i) => s + Number(i.total_weight_kg || 0), 0);
+
             return (
-              <div key={order.id} style={{ background: '#151a25', border: '1px solid #1e293b', borderRadius: 12, overflow: 'hidden' }}>
+              <div key={order.id} style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#f8fafc' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: colors.text }}>
                         #{order.id.slice(0,8).toUpperCase()}
                       </span>
                       <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, border: `1px solid ${STATUS_COLORS[order.status]}`, color: STATUS_COLORS[order.status] }}>
                         {STATUS_LABELS[order.status]}
                       </span>
-                      <span style={{ fontSize: 12, color: '#64748b' }}>
-                        {order.customer_name} · {order.customer_email}
+                      <span style={{ fontSize: 12, color: colors.textMuted }}>
+                        {order.customer_name} &middot; {order.customer_email}
                       </span>
-                      <span style={{ fontSize: 11, color: '#475569' }}>
+                      <span style={{ fontSize: 11, color: colors.textFaint }}>
                         {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </span>
                     </div>
@@ -132,16 +125,15 @@ export default function AdminPage() {
                     {/* Items */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
                       {(order.items || []).map((item, i) => (
-                        <div key={i} style={{ fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <div key={i} style={{ fontSize: 12, color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: colors.bg, borderRadius: 6, padding: '5px 8px' }}>
                           <span>📐 {item.original_name}</span>
-                          <span style={{ color: '#64748b' }}>{item.cutting_method} · {item.material?.replace('_',' ')} · {item.thickness_mm}mm · ×{item.quantity}</span>
-                          <span style={{ color: '#22d3a5' }}>€{Number(item.total_price).toFixed(2)}</span>
+                          <span style={{ color: colors.textMuted }}>{item.cutting_method} &middot; {item.material?.replace('_',' ')} &middot; {item.thickness_mm}mm &middot; &times;{item.quantity}</span>
+                          <span style={{ color: colors.accent }}>&euro;{Number(item.total_price).toFixed(2)}</span>
+                          {item.total_weight_kg && <span style={{ color: colors.textFaint }}>{Number(item.total_weight_kg).toFixed(3)} kg</span>}
                           {item.file_id && (
-                            <button
-                              onClick={() => downloadDxf(item.file_id, item.original_name)}
-                              style={{ fontSize: 11, padding: '2px 8px', background: 'rgba(34,211,165,0.1)', color: '#22d3a5', border: '1px solid rgba(34,211,165,0.3)', borderRadius: 5, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                              title="Download DXF file">
-                              ↓ DXF
+                            <button onClick={() => downloadDxf(item.file_id, item.original_name)}
+                              style={{ fontSize: 11, padding: '2px 8px', background: colors.accentBg, color: colors.accent, border: `1px solid ${colors.accent}40`, borderRadius: 5, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                              &darr; DXF
                             </button>
                           )}
                         </div>
@@ -150,29 +142,34 @@ export default function AdminPage() {
 
                     {/* Address + Phone */}
                     {addr.street && (
-                      <div style={{ fontSize: 11, color: '#475569' }}>
-                        📍 {addr.name} · {addr.street}, {addr.city} {addr.postal_code}, {addr.country}
+                      <div style={{ fontSize: 11, color: colors.textFaint }}>
+                        📍 {addr.name} &middot; {addr.street}, {addr.city} {addr.postal_code}, {addr.country}
                       </div>
                     )}
                     {order.phone && (
-                      <div style={{ fontSize: 11, color: '#475569', marginTop: 3 }}>
+                      <div style={{ fontSize: 11, color: colors.textFaint, marginTop: 3 }}>
                         📞 {order.phone}
                       </div>
                     )}
                   </div>
 
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#22d3a5' }}>€{total.toFixed(2)}</div>
-                    <div style={{ fontSize: 11, color: '#475569', marginBottom: 10 }}>inc. VAT</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: colors.accent }}>&euro;{total.toFixed(2)}</div>
+                    <div style={{ fontSize: 11, color: colors.textFaint }}>inc. VAT</div>
+                    {totalWeight > 0 && (
+                      <div style={{ fontSize: 11, color: colors.textFaint, marginTop: 2, marginBottom: 8 }}>
+                        ~{totalWeight.toFixed(3)} kg
+                      </div>
+                    )}
 
                     {/* Action buttons */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 8 }}>
                       {NEXT_STATUS[order.status] && (
                         <button
                           onClick={() => updateStatus(order.id, NEXT_STATUS[order.status])}
                           disabled={updating === order.id}
-                          style={{ fontSize: 12, padding: '6px 12px', background: '#22d3a5', color: '#0f1117', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                          {updating === order.id ? '...' : `→ ${STATUS_LABELS[NEXT_STATUS[order.status]]}`}
+                          style={{ fontSize: 12, padding: '6px 12px', background: colors.accent, color: colors.bg === '#f1f5f9' ? '#fff' : '#0f1117', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                          {updating === order.id ? '...' : `\u2192 ${STATUS_LABELS[NEXT_STATUS[order.status]]}`}
                         </button>
                       )}
                       {order.status !== 'cancelled' && order.status !== 'delivered' && (
@@ -183,8 +180,8 @@ export default function AdminPage() {
                         </button>
                       )}
                       <button onClick={() => downloadPdf(order.id)}
-                        style={{ fontSize: 11, padding: '5px 10px', background: 'transparent', color: '#64748b', border: '1px solid #1e293b', borderRadius: 6, cursor: 'pointer' }}>
-                        ↓ PDF
+                        style={{ fontSize: 11, padding: '5px 10px', background: 'transparent', color: colors.textMuted, border: `1px solid ${colors.border}`, borderRadius: 6, cursor: 'pointer' }}>
+                        &darr; PDF
                       </button>
                     </div>
                   </div>
