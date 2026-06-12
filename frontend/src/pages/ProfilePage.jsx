@@ -13,7 +13,6 @@ export default function ProfilePage() {
   const [form, setForm] = useState({
     full_name: '', phone: '', street: '', city: '', postal_code: '', country: '',
   });
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -32,8 +31,7 @@ export default function ProfilePage() {
           });
         }
       })
-      .catch(err => console.error('Profile load error:', err))
-      .finally(() => setLoading(false));
+      .catch(() => {});
   }, []);
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -52,19 +50,50 @@ export default function ProfilePage() {
     }
   };
 
-  const card = { background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 16 };
-  const label = { fontSize: 12, color: colors.textMuted, display: 'block', marginBottom: 5 };
-  const inputStyle = { width: '100%', background: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: 6, padding: '8px 11px', fontSize: 13, color: colors.text, outline: 'none', boxSizing: 'border-box' };
+  const card = {
+    background: colors.cardBg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 12,
+    padding: '20px 24px',
+    marginBottom: 16,
+  };
 
-  // Don't block render on profile load - show form even if still loading
-  // This prevents the blank page on first registration
+  const inputStyle = {
+    width: '100%',
+    background: colors.inputBg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 6,
+    padding: '8px 11px',
+    fontSize: 13,
+    color: colors.text,
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const labelStyle = {
+    fontSize: 12,
+    color: colors.textMuted,
+    display: 'block',
+    marginBottom: 5,
+  };
+
+  const sectionTitle = {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    marginBottom: 14,
+  };
 
   return (
     <div style={{ maxWidth: 560 }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600, color: colors.text, marginBottom: 4 }}>{t('profileTitle')}</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: colors.text, marginBottom: 4 }}>
+          Profile
+        </h1>
         {isNew && (
-          <div style={{ background: 'rgba(34,211,165,0.1)', border: `1px solid ${colors.accent}`, borderRadius: 8, padding: '10px 14px', marginTop: 10 }}>
+          <div style={{ background: colors.accentBg, border: `1px solid ${colors.accent}`, borderRadius: 8, padding: '10px 14px', marginTop: 10 }}>
             <p style={{ fontSize: 13, color: colors.accent, margin: 0 }}>
               Welcome! Please fill in your details below — they will be auto-filled when you place orders.
             </p>
@@ -74,62 +103,71 @@ export default function ProfilePage() {
 
       {/* Account info */}
       <div style={card}>
-        <div style={{ fontSize: 12, color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
-          {t('accountDetails')}
-        </div>
+        <div style={sectionTitle}>Account</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {[[t('name'), user?.name], [t('email'), user?.email],
-            [t('memberSince'), user?.created_at ? new Date(user.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'],
-            ['Role', user?.is_admin ? 'Administrator' : 'Customer']
-          ].map(([l, v]) => (
-            <div key={l}>
-              <div style={{ fontSize: 11, color: colors.textFaint }}>{l}</div>
-              <div style={{ fontSize: 13, color: colors.text, padding: '4px 0' }}>{v}</div>
+          <div>
+            <div style={{ fontSize: 11, color: colors.textFaint }}>Name</div>
+            <div style={{ fontSize: 13, color: colors.text, padding: '4px 0' }}>{user?.name || '—'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: colors.textFaint }}>Email</div>
+            <div style={{ fontSize: 13, color: colors.text, padding: '4px 0' }}>{user?.email || '—'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: colors.textFaint }}>Member since</div>
+            <div style={{ fontSize: 13, color: colors.text, padding: '4px 0' }}>
+              {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
             </div>
-          ))}
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: colors.textFaint }}>Role</div>
+            <div style={{ fontSize: 13, color: colors.text, padding: '4px 0' }}>{user?.is_admin ? 'Administrator' : 'Customer'}</div>
+          </div>
         </div>
       </div>
 
-      {/* Contact & delivery details */}
+      {/* Contact & delivery */}
       <form onSubmit={save}>
         <div style={card}>
-          <div style={{ fontSize: 12, color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
-            Contact & Delivery Details
-          </div>
+          <div style={sectionTitle}>Contact & Delivery Details</div>
           <p style={{ fontSize: 12, color: colors.textFaint, marginBottom: 16, lineHeight: 1.5 }}>
             These details will be auto-filled when you place an order. You can always change them at checkout.
           </p>
 
-          {error && <div style={{ background: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: 6, padding: '8px 12px', marginBottom: 14, fontSize: 12, color: '#fca5a5' }}>{error}</div>}
+          {error && (
+            <div style={{ background: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: 6, padding: '8px 12px', marginBottom: 14, fontSize: 12, color: '#fca5a5' }}>
+              {error}
+            </div>
+          )}
 
           <div style={{ marginBottom: 14 }}>
-            <label style={label}>Full name</label>
+            <label style={labelStyle}>Full name</label>
             <input type="text" value={form.full_name} onChange={set('full_name')} placeholder="Your full name" style={inputStyle} />
           </div>
 
           <div style={{ marginBottom: 14 }}>
-            <label style={label}>Phone number</label>
+            <label style={labelStyle}>Phone number</label>
             <input type="tel" value={form.phone} onChange={set('phone')} placeholder="+359 888 123 456" style={inputStyle} />
           </div>
 
           <div style={{ marginBottom: 14 }}>
-            <label style={label}>Street address</label>
+            <label style={labelStyle}>Street address</label>
             <input type="text" value={form.street} onChange={set('street')} placeholder="Street and number" style={inputStyle} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
             <div>
-              <label style={label}>City</label>
+              <label style={labelStyle}>City</label>
               <input type="text" value={form.city} onChange={set('city')} placeholder="Sofia" style={inputStyle} />
             </div>
             <div>
-              <label style={label}>Postal code</label>
+              <label style={labelStyle}>Postal code</label>
               <input type="text" value={form.postal_code} onChange={set('postal_code')} placeholder="1000" style={inputStyle} />
             </div>
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={label}>Country</label>
+            <label style={labelStyle}>Country</label>
             <input type="text" value={form.country} onChange={set('country')} placeholder="Bulgaria" style={inputStyle} />
           </div>
 
@@ -146,13 +184,12 @@ export default function ProfilePage() {
 
       {/* Preferences */}
       <div style={card}>
-        <div style={{ fontSize: 12, color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
-          {t('preferences')}
-        </div>
+        <div style={sectionTitle}>Preferences</div>
+
         <div style={{ marginBottom: 16 }}>
-          <label style={label}>{t('theme')}</label>
+          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 8 }}>Theme</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            {[['dark', t('darkTheme'), '\uD83C\uDF19'], ['light', t('lightTheme'), '\u2600\uFE0F']].map(([val, lbl, icon]) => (
+            {[['dark', 'Dark', '\uD83C\uDF19'], ['light', 'Light', '\u2600\uFE0F']].map(([val, lbl, icon]) => (
               <button key={val} onClick={() => setTheme(val)} style={{
                 flex: 1, padding: '9px 14px', borderRadius: 8, cursor: 'pointer',
                 border: `1px solid ${theme === val ? colors.accent : colors.border}`,
@@ -161,13 +198,14 @@ export default function ProfilePage() {
                 fontSize: 13, fontWeight: theme === val ? 600 : 400,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}>
-                {icon} {lbl}
+                <span>{icon}</span> {lbl}
               </button>
             ))}
           </div>
         </div>
+
         <div>
-          <label style={label}>{t('language')}</label>
+          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 8 }}>Language</div>
           <div style={{ display: 'flex', gap: 8 }}>
             {[['en', 'English', '\uD83C\uDDEC\uD83C\uDDE7'], ['bg', '\u0411\u044a\u043b\u0433\u0430\u0440\u0441\u043a\u0438', '\uD83C\uDDE7\uD83C\uDDEC']].map(([val, lbl, flag]) => (
               <button key={val} onClick={() => setLang(val)} style={{
@@ -178,7 +216,7 @@ export default function ProfilePage() {
                 fontSize: 13, fontWeight: lang === val ? 600 : 400,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}>
-                {flag} {lbl}
+                <span>{flag}</span> {lbl}
               </button>
             ))}
           </div>

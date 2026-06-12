@@ -64,7 +64,7 @@ ordersRouter.get('/', authenticate, async (req, res) => {
          'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
          'cutting_method', q.cutting_method, 'material', q.material,
          'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
-         'unit_price', q.unit_price, 'total_price', q.total_price
+         'unit_price', q.unit_price, 'total_price', q.total_price, 'weight_kg', q.weight_kg, 'total_weight_kg', q.total_weight_kg
        )) as items,
        SUM(q.total_price) as subtotal
      FROM orders o
@@ -86,7 +86,7 @@ ordersRouter.get('/:id', authenticate, async (req, res) => {
          'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
          'cutting_method', q.cutting_method, 'material', q.material,
          'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
-         'unit_price', q.unit_price, 'total_price', q.total_price
+         'unit_price', q.unit_price, 'total_price', q.total_price, 'weight_kg', q.weight_kg, 'total_weight_kg', q.total_weight_kg
        )) as items,
        SUM(q.total_price) as subtotal
      FROM orders o
@@ -112,7 +112,7 @@ ordersRouter.get('/:id/pdf', authenticate, async (req, res) => {
            'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
            'cutting_method', q.cutting_method, 'material', q.material,
            'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
-           'unit_price', q.unit_price, 'total_price', q.total_price
+           'unit_price', q.unit_price, 'total_price', q.total_price, 'weight_kg', q.weight_kg, 'total_weight_kg', q.total_weight_kg
          )) as items
        FROM orders o
        JOIN quotes q ON q.order_id = o.id
@@ -124,7 +124,7 @@ ordersRouter.get('/:id/pdf', authenticate, async (req, res) => {
            'id', q.id, 'original_name', f.original_name, 'file_id', f.id,
            'cutting_method', q.cutting_method, 'material', q.material,
            'thickness_mm', q.thickness_mm, 'quantity', q.quantity,
-           'unit_price', q.unit_price, 'total_price', q.total_price
+           'unit_price', q.unit_price, 'total_price', q.total_price, 'weight_kg', q.weight_kg, 'total_weight_kg', q.total_weight_kg
          )) as items
        FROM orders o
        JOIN quotes q ON q.order_id = o.id

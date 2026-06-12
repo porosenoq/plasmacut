@@ -77,6 +77,7 @@ function QuoteCard({ quote, onDelete, colors, t }) {
               [t('thickness'), `${quote.thickness_mm} mm`],
               ['Qty', `\u00D7${quote.quantity}`],
               ['Size', quote.bounding_box_w_mm ? `${(+quote.bounding_box_w_mm).toFixed(0)}\u00D7${(+quote.bounding_box_h_mm).toFixed(0)} mm` : '---'],
+              ['Weight', quote.total_weight_kg ? `${(+quote.total_weight_kg).toFixed(3)} kg` : '---'],
             ].map(([l, v]) => (
               <div key={l}>
                 <div style={{ fontSize: 10, color: colors.textFaint }}>{l}</div>
@@ -188,6 +189,7 @@ export default function QuotesPage() {
                   <div style={{ padding: '10px 16px', borderTop: `1px solid ${colors.border}`, display: 'flex', justifyContent: 'flex-end', gap: 20 }}>
                     <div style={{ fontSize: 12, color: colors.textMuted }}>{t('subtotalExVat')}: <span style={{ color: colors.textSecondary }}>{'\u20AC'}{groupTotal.toFixed(2)}</span></div>
                     <div style={{ fontSize: 12, color: colors.textMuted }}>{t('vat')}: <span style={{ color: colors.textSecondary }}>{'\u20AC'}{groupVat.toFixed(2)}</span></div>
+                    <div style={{ fontSize: 12, color: colors.textMuted }}>Weight: <span style={{ color: colors.textSecondary }}>{group.quotes.reduce((s,q) => s + Number(q.total_weight_kg||0), 0).toFixed(3)} kg</span></div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: colors.accent }}>{t('totalIncVat')}: {'\u20AC'}{(groupTotal + groupVat).toFixed(2)}</div>
                   </div>
                 )}

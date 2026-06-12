@@ -38,6 +38,16 @@ export const api = {
   getDxfDownloadUrl: (fileId) => `${BASE}/files/${fileId}/download`,
   getProfile: () => request('GET', '/profile'),
   saveProfile: (d) => request('PUT', '/profile', d),
+
+  // Marketplace
+  getMarketplaceJobs: () => request('GET', '/marketplace/jobs'),
+  claimJob: (id) => request('POST', `/marketplace/jobs/${id}/claim`),
+  getMyJobs: () => request('GET', '/marketplace/my-jobs'),
+  updateJobStatus: (id, status) => request('PATCH', `/marketplace/my-jobs/${id}/status`, { status }),
+  applyAsProvider: (d) => request('POST', '/marketplace/apply', d),
+  getProviderStatus: () => request('GET', '/marketplace/apply/status'),
+  getProviderApplications: () => request('GET', '/marketplace/admin/applications'),
+  reviewApplication: (id, status) => request('PATCH', `/marketplace/admin/applications/${id}`, { status }),
   updateOrderStatus: (id, status) => request('PATCH', `/orders/${id}/status`, { status }),
   getAdminOrders: () => request('GET', '/orders/admin/all'),
 };

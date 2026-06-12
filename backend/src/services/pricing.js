@@ -24,6 +24,10 @@ const LASER_MACHINE_RATE  = 8.00;
 // Your reseller margin on top of supplier cost (15%)
 const RESELLER_MARGIN = 0.15;
 
+// Platform margin taken from the customer price when a job goes to a marketplace provider
+// Provider receives (unit_price_ex_vat * (1 - PLATFORM_MARGIN))
+const PLATFORM_MARGIN = 0.15;
+
 // VAT rate
 const VAT_RATE = 0.20;
 
@@ -86,8 +90,14 @@ export function calculateQuote({ material, thicknessMm, method, cutLengthMm, bbo
     vat_amount:           +vatAmount.toFixed(2),
     total_price:          +totalIncVat.toFixed(2),
 
+    // Marketplace provider payout (per unit and total, ex VAT)
+    provider_unit_payout:  +(unitPriceExVat * (1 - PLATFORM_MARGIN)).toFixed(2),
+    provider_total_payout: +(totalExVat * (1 - PLATFORM_MARGIN)).toFixed(2),
+    platform_margin_pct:   `${(PLATFORM_MARGIN * 100).toFixed(0)}%`,
+
     // Info
     cut_time_seconds:     Math.round(cutTimeSec),
     weight_kg:            +weightKg.toFixed(3),
+    total_weight_kg:      +(weightKg * quantity).toFixed(3),
   };
 }

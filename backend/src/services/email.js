@@ -181,3 +181,30 @@ export async function sendStatusUpdate({ order, user, newStatus }) {
     html,
   });
 }
+
+// --- Customer: provider claimed your order ---
+export async function sendProviderClaimedNotice({ order, items, customer, provider }) {
+  if (!process.env.RESEND_API_KEY) return;
+  const subtotal = items.reduce((s, i) => s + Number(i.total_price), 0);
+
+  const html = baseTemplate(`
+    <div style="padding:24px 28px;border-bottom:1px solid #1e293b">
+      <h1 style="font-size:20px;font-weight:600;color:#f8fafc;margin:0 0 6px">A provider has accepted your order</h1>
+      <p style="font-size:14px;color:#64748b;margin:0">Order #${order.id.slice(0,8).toUpperCase()} is now confirmed and will go into production.</p>
+    </div>
+    <div style="padding:24px 28px">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px">
+        <tbody>${orderItemsHtml(items)}</tbody>
+      </table>
+      <div style="font-size:14px;font-weight:600;color:#22d3a5;margin-bottom:16px">Total: ${formatCurrency(subtotal * 1.20)} inc. VAT</div>
+      <a href="${APP_URL}/orders" style="display:inline-block;padding:10px 20px;background:#22d3a5;color:#0f1117;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none">Track your order &rarr;</a>
+    </div>
+  `);
+
+  await resend.emails.send({
+    from: FROM,
+    to: customer.email,
+    subject: `Your order is confirmed - #${order.id.slice(0,8).toUpperCase()}`,
+    html,
+  });
+}

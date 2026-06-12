@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS quotes (
   total_price NUMERIC NOT NULL,
   currency TEXT DEFAULT 'EUR',
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft','sent','accepted','rejected','ordered')),
+  weight_kg NUMERIC,
+  total_weight_kg NUMERIC,
   notes TEXT,
   valid_until TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days'),
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -69,6 +71,13 @@ END $$;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='order_id') THEN
     ALTER TABLE quotes ADD COLUMN order_id UUID REFERENCES orders(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='weight_kg') THEN
+    ALTER TABLE quotes ADD COLUMN weight_kg NUMERIC;
+    ALTER TABLE quotes ADD COLUMN total_weight_kg NUMERIC;
   END IF;
 END $$;
 
@@ -150,6 +159,81 @@ export async function runProfileMigration() {
     console.log('Profile schema ready');
   } catch (err) {
     console.error('Profile migration failed:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Marketplace migration (appended)
+export async function runMarketplaceMigration() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_provider') THEN
+          ALTER TABLE users ADD COLUMN is_provider BOOLEAN DEFAULT FALSE;
+        END IF;
+      END $$;
+
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='provider_id') THEN
+          ALTER TABLE orders ADD COLUMN provider_id UUID REFERENCES users(id) ON DELETE SET NULL;
+        END IF;
+      END $$;
+
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='posted_to_marketplace') THEN
+          ALTER TABLE orders ADD COLUMN posted_to_marketplace BOOLEAN DEFAULT TRUE;
+        END IF;
+      END $$;
+
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='claimed_at') THEN
+          ALTER TABLE orders ADD COLUMN claimed_at TIMESTAMPTZ;
+        END IF;
+      END $$;
+
+      CREATE TABLE IF NOT EXISTS provider_applications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        equipment TEXT,
+        max_thickness_mm NUMERIC,
+        cutting_methods TEXT[],
+        location TEXT,
+        notes TEXT,
+        status TEXT DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        reviewed_at TIMESTAMPTZ
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_orders_provider ON orders(provider_id);
+      CREATE INDEX IF NOT EXISTS idx_provider_apps_user ON provider_applications(user_id);
+    `);
+    console.log('Marketplace schema ready');
+  } catch (err) {
+    console.error('Marketplace migration failed:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Add provider payout columns to quotes
+export async function runPayoutMigration() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='provider_unit_payout') THEN
+          ALTER TABLE quotes ADD COLUMN provider_unit_payout NUMERIC;
+          ALTER TABLE quotes ADD COLUMN provider_total_payout NUMERIC;
+        END IF;
+      END $$;
+    `);
+    console.log('Payout schema ready');
+  } catch (err) {
+    console.error('Payout migration failed:', err.message);
     throw err;
   } finally {
     client.release();

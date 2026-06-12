@@ -97,6 +97,10 @@ export default function FileQuoteRow({ entry, method, onPricing, onFormChange, o
                       <span>{t('qtyDiscount')}</span><span>-{pricing.quantity_discount}</span>
                     </div>
                   )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '2px 0', color: colors.textFaint }}>
+                    <span>Weight</span>
+                    <span>{pricing.weight_kg} kg/pc &nbsp;&middot;&nbsp; {pricing.total_weight_kg} kg total</span>
+                  </div>
                   <div style={{ borderTop: `1px solid ${colors.border}`, marginTop: 6, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, color: colors.text }}>
                     <span>{'\u00D7'} {form.quantity} {'\u2014'} {t('exVat')}</span>
                     <span style={{ color: colors.accent }}>{'\u20AC'}{pricing.total_ex_vat}</span>

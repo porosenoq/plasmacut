@@ -48,6 +48,7 @@ export default function UploadPage() {
   const subtotal = readyFiles.reduce((sum, f) => sum + (f.pricing?.total_ex_vat ?? 0), 0);
   const vatAmount = subtotal * VAT_RATE;
   const grandTotal = subtotal + vatAmount;
+  const totalWeight = readyFiles.reduce((sum, f) => sum + (f.pricing?.total_weight_kg ?? 0), 0);
   const canCheckout = readyFiles.length > 0 && pendingFiles.length === 0;
 
   return (
@@ -127,6 +128,15 @@ export default function UploadPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700, padding: '10px 0 0', color: colors.text, borderTop: `1px solid ${colors.border}`, marginTop: 6 }}>
                   <span>{t('totalIncVat')}</span><span style={{ color: colors.accent }}>{'\u20AC'}{grandTotal.toFixed(2)}</span>
                 </div>
+                {totalWeight > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '8px 0 0', color: colors.textMuted }}>
+                    <span>Estimated total weight</span>
+                    <span style={{ color: colors.textSecondary, fontWeight: 500 }}>
+                      {totalWeight.toFixed(3)} kg
+                      {totalWeight > 1 && <span style={{ color: colors.textFaint, marginLeft: 6 }}>({(totalWeight * 1000).toFixed(0)} g)</span>}
+                    </span>
+                  </div>
+                )}
               </div>
             </>
           ) : (

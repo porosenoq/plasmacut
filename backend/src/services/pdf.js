@@ -110,7 +110,17 @@ export function generateQuotePdf({ order, items, user, address, res }) {
     .text('Total inc. VAT', totX, rowY)
     .text(fmt(total), 0, rowY, { align: 'right', width: totW });
 
-  rowY += 32;
+  // ── Total weight ─────────────────────────────────────────────
+  const totalWeightKg = items.reduce((s, i) => s + Number(i.total_weight_kg || i.weight_kg || 0), 0);
+  if (totalWeightKg > 0) {
+    rowY += 14;
+    doc.fontSize(9).fillColor(MGRAY)
+      .text('Estimated total weight:', totX, rowY)
+      .text(`${totalWeightKg.toFixed(3)} kg`, 0, rowY, { align: 'right', width: totW });
+    rowY += 4;
+  }
+
+  rowY += 20;
 
   // ── Footer — placed right after totals, not at page bottom ───
   doc.moveTo(50, rowY).lineTo(PW - 50, rowY).strokeColor('#cbd5e1').lineWidth(0.5).stroke();

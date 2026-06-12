@@ -54,11 +54,24 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [tab, setTab] = useState('orders');
+  const [applications, setApplications] = useState([]);
+  const [reviewing, setReviewing] = useState(null);
 
   useEffect(() => {
     if (user && !user.is_admin) { navigate('/'); return; }
     api.getAdminOrders().then(setOrders).catch(console.error).finally(() => setLoading(false));
+    api.getProviderApplications().then(setApplications).catch(console.error);
   }, [user]);
+
+  const reviewApp = async (appId, status) => {
+    setReviewing(appId);
+    try {
+      await api.reviewApplication(appId, status);
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, status } : a));
+    } catch (e) { alert(e.message); }
+    finally { setReviewing(null); }
+  };
 
   const updateStatus = async (orderId, status) => {
     setUpdating(orderId);
@@ -77,9 +90,36 @@ export default function AdminPage() {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Admin — Orders</h1>
-        <p style={{ fontSize: 14, color: colors.textMuted }}>{orders.length} total orders</p>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Admin</h1>
+        <p style={{ fontSize: 14, color: colors.textMuted }}>{orders.length} orders &middot; {applications.filter(a=>a.status==='pending').length} pending applications</p>
       </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: `1px solid ${colors.border}` }}>
+        {[['orders', 'Orders'], ['applications', 'Provider Applications']].map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)} style={{
+            padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            background: 'transparent', border: 'none',
+            color: tab === key ? colors.accent : colors.textMuted,
+            borderBottom: tab === key ? `2px solid ${colors.accent}` : '2px solid transparent',
+            marginBottom: -1,
+          }}>
+            {label}
+            {key === 'applications' && applications.filter(a=>a.status==='pending').length > 0 && (
+              <span style={{ marginLeft: 6, fontSize: 11, background: '#f59e0b', color: '#0f1117', borderRadius: 99, padding: '1px 6px' }}>
+                {applications.filter(a=>a.status==='pending').length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'applications' && (
+        <ApplicationsTab applications={applications} reviewing={reviewing} onReview={reviewApp} colors={colors} />
+      )}
+
+      {tab === 'orders' && (
+      <>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 20 }}>
@@ -191,6 +231,60 @@ export default function AdminPage() {
           })}
         </div>
       )}
+      </>
+      )}
+    </div>
+  );
+}
+
+function ApplicationsTab({ applications, reviewing, onReview, colors }) {
+  if (applications.length === 0) {
+    return <div style={{ textAlign: 'center', padding: '48px 0', color: colors.textMuted }}>No provider applications yet</div>;
+  }
+
+  const STATUS_COLORS = { pending: '#f59e0b', approved: '#22d3a5', rejected: '#ef4444' };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {applications.map(app => (
+        <div key={app.id} style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: colors.text }}>{app.user_name}</span>
+                <span style={{ fontSize: 12, color: colors.textMuted }}>{app.user_email}</span>
+                <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, border: `1px solid ${STATUS_COLORS[app.status]}`, color: STATUS_COLORS[app.status], textTransform: 'capitalize' }}>
+                  {app.status}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>
+                <strong>Equipment:</strong> {app.equipment}
+              </div>
+              <div style={{ display: 'flex', gap: 14, fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>
+                <span>Methods: {(app.cutting_methods || []).join(', ') || '—'}</span>
+                {app.max_thickness_mm && <span>Max thickness: {app.max_thickness_mm}mm</span>}
+                <span>Location: {app.location}</span>
+              </div>
+              {app.notes && <div style={{ fontSize: 12, color: colors.textFaint, marginTop: 4 }}>{app.notes}</div>}
+              <div style={{ fontSize: 11, color: colors.textFaint, marginTop: 6 }}>
+                Applied {new Date(app.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </div>
+            </div>
+            {app.status === 'pending' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                <button onClick={() => onReview(app.id, 'approved')} disabled={reviewing === app.id}
+                  style={{ fontSize: 12, padding: '6px 14px', background: colors.accent, color: colors.bg === '#f1f5f9' ? '#fff' : '#0f1117', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}>
+                  Approve
+                </button>
+                <button onClick={() => onReview(app.id, 'rejected')} disabled={reviewing === app.id}
+                  style={{ fontSize: 12, padding: '6px 14px', background: 'transparent', color: '#ef4444', border: '1px solid #ef444440', borderRadius: 6, cursor: 'pointer' }}>
+                  Reject
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

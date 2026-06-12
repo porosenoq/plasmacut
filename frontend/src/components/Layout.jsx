@@ -20,6 +20,8 @@ export default function Layout() {
             ['/', t('newQuote')],
             ['/quotes', t('quotes')],
             ['/orders', t('orders')],
+            ['/marketplace', 'Marketplace'],
+            ...(user?.is_provider ? [['/provider-dashboard', 'My Jobs']] : []),
             ...(user?.is_admin ? [['/admin', t('admin')]] : []),
           ].map(([to, label]) => (
             <NavLink key={to} to={to} end={to === '/'} style={({ isActive }) => ({

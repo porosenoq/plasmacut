@@ -67,6 +67,7 @@ export default function OrdersPage() {
                           <span>📐 {item.original_name}</span>
                           <span style={{ color: colors.textMuted }}>{item.cutting_method} &middot; {item.material?.replace('_',' ')} &middot; {item.thickness_mm}mm &middot; {'\u00D7'}{item.quantity}</span>
                           <span style={{ color: colors.accent }}>{'\u20AC'}{Number(item.total_price).toFixed(2)} {t('exVat')}</span>
+                          {item.total_weight_kg && <span style={{ color: colors.textFaint }}>{Number(item.total_weight_kg).toFixed(3)} kg</span>}
                         </div>
                       ))}
                     </div>
@@ -79,7 +80,12 @@ export default function OrdersPage() {
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: 20, fontWeight: 700, color: colors.accent }}>{'\u20AC'}{total.toFixed(2)}</div>
-                    <div style={{ fontSize: 11, color: colors.textFaint, marginBottom: 12 }}>{t('incVat')}</div>
+                    <div style={{ fontSize: 11, color: colors.textFaint }}>{t('incVat')}</div>
+                    {(order.items||[]).reduce((s,i)=>s+Number(i.total_weight_kg||0),0) > 0 && (
+                      <div style={{ fontSize: 11, color: colors.textFaint, marginBottom: 6, marginTop: 3 }}>
+                        ~{(order.items||[]).reduce((s,i)=>s+Number(i.total_weight_kg||0),0).toFixed(3)} kg
+                      </div>
+                    )}
                     <button onClick={() => downloadPdf(order.id)}
                       style={{ fontSize: 12, padding: '6px 14px', background: 'transparent', color: colors.textMuted, border: `1px solid ${colors.border}`, borderRadius: 6, cursor: 'pointer' }}>
                       {'\u2193'} PDF

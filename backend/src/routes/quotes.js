@@ -56,12 +56,15 @@ quotesRouter.post('/', authenticate, async (req, res) => {
   const result = await query(
     `INSERT INTO quotes
       (user_id, file_id, cutting_method, material, thickness_mm, quantity,
-       unit_material_cost, unit_cutting_cost, setup_fee, unit_price, total_price, notes)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+       unit_material_cost, unit_cutting_cost, setup_fee, unit_price, total_price,
+       weight_kg, total_weight_kg, provider_unit_payout, provider_total_payout, notes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
     [
       req.user.id, file_id, cutting_method, material, thickness_mm, quantity,
       pricing.unit_material_cost, pricing.unit_cutting_cost, pricing.setup_fee,
-      pricing.unit_price, pricing.total_price, notes || null,
+      pricing.unit_price, pricing.total_price,
+      pricing.weight_kg, pricing.total_weight_kg,
+      pricing.provider_unit_payout, pricing.provider_total_payout, notes || null,
     ]
   );
 

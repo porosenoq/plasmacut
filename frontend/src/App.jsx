@@ -10,6 +10,9 @@ import QuotesPage from './pages/QuotesPage.jsx';
 import OrdersPage from './pages/OrdersPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import MarketplacePage from './pages/MarketplacePage.jsx';
+import ProviderApplyPage from './pages/ProviderApplyPage.jsx';
+import ProviderDashboardPage from './pages/ProviderDashboardPage.jsx';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -32,6 +35,9 @@ export default function App() {
               <Route path="orders" element={<OrdersPage />} />
               <Route path="admin" element={<AdminPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="marketplace" element={<MarketplacePage />} />
+              <Route path="provider-apply" element={<ProviderApplyPage />} />
+              <Route path="provider-dashboard" element={<ProviderDashboardPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
